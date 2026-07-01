@@ -57,7 +57,14 @@ function roleBadge(role) {
 // 5) 공통 네비/푸터/전환기 주입
 function renderChrome(active) {
   const role = getRole(), p = ROLES[role];
-  const tabs = NAV.filter(([,,roles]) => roles.includes(role));
+  // MVP 미리보기 모드 (회의용) — ?mvp=1 로 켜고 ?full=1 로 끔 (세션 내 유지)
+  const _q = new URLSearchParams(location.search);
+  if (_q.has('mvp')) sessionStorage.setItem('greedy_mvp','1');
+  if (_q.has('full')) sessionStorage.removeItem('greedy_mvp');
+  const MVP = sessionStorage.getItem('greedy_mvp') === '1';
+  const MVP_TABS = ['index.html','member.html','study.html','projects.html','gallery.html'];
+  const tabs = MVP ? NAV.filter(([h]) => MVP_TABS.includes(h)) : NAV.filter(([,,roles]) => roles.includes(role));
+  const applyBtn = MVP ? '' : `<a href="recruit.html" class="inline-flex items-center px-3.5 py-2 rounded-lg text-sm font-semibold bg-brand text-white hover:bg-brand-soft" title="지원 폼으로 이동">지원하기</a>`;
   const accountHtml = role === 'guest'
     ? `<a href="#" class="hidden sm:inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium ring-1 ring-slate-900/10 dark:ring-white/15 hover:bg-slate-200/60 dark:hover:bg-white/10" title="GitHub로 로그인 (외부인은 로그인 후 멤버 기능 사용)">로그인</a>`
     : `<a href="member-profile.html" class="hidden sm:grid place-items-center w-9 h-9 rounded-full bg-slate-300 dark:bg-white/20 text-sm font-medium" title="${p.name} · ${p.desc} — 내 이력서로 이동">${p.name[0]}</a>`;
@@ -72,10 +79,10 @@ function renderChrome(active) {
       </div>
       <div class="flex items-center gap-2">
         <button onclick="document.documentElement.classList.toggle('dark')" class="p-2 rounded-lg hover:bg-slate-200/60 dark:hover:bg-white/10" title="다크모드">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 15.75A9 9 0 1 1 8.25 2.25 7 7 0 0 0 21.75 15.75Z"/></svg>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/></svg>
         </button>
         ${accountHtml}
-        <a href="recruit.html" class="inline-flex items-center px-3.5 py-2 rounded-lg text-sm font-semibold bg-brand text-white hover:bg-brand-soft" title="지원 폼으로 이동">지원하기</a>
+        ${applyBtn}
       </div>
     </nav>
   </header>`;
@@ -95,6 +102,10 @@ function renderChrome(active) {
     if (!el.getAttribute('data-roles').split(',').includes(role)) el.style.display = 'none';
   });
 
+  // MVP 미리보기: 비-MVP 요소 숨김 / MVP 전용 요소 표시
+  document.querySelectorAll('[data-mvp-hide]').forEach(el => { if (MVP) el.style.display = 'none'; });
+  document.querySelectorAll('[data-mvp-only]').forEach(el => { if (!MVP) el.style.display = 'none'; });
+
   // 우측 하단 따라다니는 프로토타입 역할 전환기
   const opts = Object.entries(ROLES).map(([k,v])=>`<option value="${k}" ${k===role?'selected':''}>${v.label} · ${v.name}</option>`).join('');
   document.body.insertAdjacentHTML('beforeend', `
@@ -105,6 +116,9 @@ function renderChrome(active) {
         ${opts}
       </select>
       <div class="mt-1 text-[10px] text-slate-400">현재: ${p.desc}</div>
+      ${MVP
+        ? `<div class="mt-1.5 pt-1.5 border-t border-white/10 text-[10px]"><span class="text-emerald-300 font-semibold">● MVP 미리보기</span> · <a href="?full=1" class="underline text-slate-300">전체 보기</a></div>`
+        : `<div class="mt-1.5 pt-1.5 border-t border-white/10 text-[10px]"><a href="?mvp=1" class="underline text-slate-400">MVP 미리보기</a></div>`}
     </div>
   </div>`);
 }
