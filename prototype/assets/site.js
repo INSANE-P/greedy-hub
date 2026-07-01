@@ -121,4 +121,12 @@ function renderChrome(active) {
         : `<div class="mt-1.5 pt-1.5 border-t border-white/10 text-[10px]"><a href="?mvp=1" class="underline text-slate-400">MVP 미리보기</a></div>`}
     </div>
   </div>`);
+
+  // 피드백 핀 코멘트 위젯 (?feedback=1 로 켜고 ?feedbackoff=1 로 끔)
+  if (_q.has('feedback')) sessionStorage.setItem('greedy_fb','1');
+  if (_q.has('feedbackoff')) sessionStorage.removeItem('greedy_fb');
+  if (sessionStorage.getItem('greedy_fb') === '1' && !window.__gfbInjected) {
+    window.__gfbInjected = true;
+    const fs = document.createElement('script'); fs.src = 'assets/feedback.js'; document.body.appendChild(fs);
+  }
 }
