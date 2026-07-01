@@ -62,9 +62,6 @@ function renderChrome(active) {
   if (_q.has('mvp')) sessionStorage.setItem('greedy_mvp','1');
   if (_q.has('full')) sessionStorage.removeItem('greedy_mvp');
   const MVP = sessionStorage.getItem('greedy_mvp') === '1';
-  if (_q.has('feedback')) sessionStorage.setItem('greedy_fb','1');
-  if (_q.has('feedbackoff')) sessionStorage.removeItem('greedy_fb');
-  const FB_ON = MVP && sessionStorage.getItem('greedy_fb') === '1'; // 피드백은 MVP에서만
   const MVP_TABS = ['index.html','member.html','study.html','projects.html','gallery.html'];
   const tabs = MVP ? NAV.filter(([h]) => MVP_TABS.includes(h)) : NAV.filter(([,,roles]) => roles.includes(role));
   const applyBtn = MVP ? '' : `<a href="recruit.html" class="inline-flex items-center px-3.5 py-2 rounded-lg text-sm font-semibold bg-brand text-white hover:bg-brand-soft" title="지원 폼으로 이동">지원하기</a>`;
@@ -120,13 +117,13 @@ function renderChrome(active) {
       </select>
       <div class="mt-1 text-[10px] text-slate-400">현재: ${p.desc}</div>
       ${MVP
-        ? `<div class="mt-1.5 pt-1.5 border-t border-white/10 text-[10px]"><span class="text-emerald-300 font-semibold">● MVP 미리보기</span> · <a href="?full=1" class="underline text-slate-300">전체</a> · <a href="${FB_ON?'?feedbackoff=1':'?feedback=1'}" class="underline ${FB_ON?'text-emerald-300':'text-slate-300'}">${FB_ON?'피드백 끄기':'피드백'}</a></div>`
+        ? `<div class="mt-1.5 pt-1.5 border-t border-white/10 text-[10px]"><span class="text-emerald-300 font-semibold">● MVP 미리보기</span> · <a href="?full=1" class="underline text-slate-300">전체 보기</a></div>`
         : `<div class="mt-1.5 pt-1.5 border-t border-white/10 text-[10px]"><a href="?mvp=1" class="underline text-slate-400">MVP 미리보기</a></div>`}
     </div>
   </div>`);
 
-  // 피드백 핀 코멘트 위젯 — MVP 미리보기에서만 활성
-  if (FB_ON && !window.__gfbInjected) {
+  // 피드백 핀 코멘트 위젯 — MVP 미리보기에서 항상 로드(위젯이 켜기/끄기 토글 제공)
+  if (MVP && !window.__gfbInjected) {
     window.__gfbInjected = true;
     const fs = document.createElement('script'); fs.src = 'assets/feedback.js'; document.body.appendChild(fs);
   }
