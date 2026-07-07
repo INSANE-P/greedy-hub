@@ -20,7 +20,8 @@
   const uid = localStorage.getItem('gfb_uid') || (() => { const u = 'u' + Math.random().toString(36).slice(2, 10); localStorage.setItem('gfb_uid', u); return u; })();
   let name = localStorage.getItem('gfb_name') || '';
   let on = localStorage.getItem('gfb_on') === '1';
-  let db = null, fbLoading = null, unsub = null, pins = [], placing = false, ui;
+  if (new URLSearchParams(location.search).has('fb')) { on = true; localStorage.setItem('gfb_on', '1'); } // 보드에서 핀으로 진입
+  let db = null, fbLoading = null, unsub = null, pins = [], placing = false, ui, jumped = false;
 
   const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const debounce = (fn, ms) => { let t; return () => { clearTimeout(t); t = setTimeout(fn, ms); }; };
@@ -99,6 +100,7 @@
     } else {
       ui.innerHTML = `<div class="gfb-bar"><span class="i">${ICON}</span><span class="lbl">코멘트</span>
         <button class="gfb-add ${placing ? 'on' : ''}">${placing ? '취소' : '+ 남기기'}</button>
+        <a class="gfb-cl" href="feedback-board.html" title="피드백 목록" style="text-decoration:none">목록</a>
         <span class="gfb-nm">${name ? esc(name) : '이름'}</span>
         <button class="gfb-cl" title="접기">▾</button></div>`;
       ui.querySelector('.gfb-add').onclick = () => { if (!name) return askName(() => setPlacing(true)); setPlacing(!placing); };
@@ -166,7 +168,7 @@
   function subscribe() {
     if (unsub) unsub();
     unsub = db.collection('feedback').where('page', '==', PAGE).onSnapshot((snap) => {
-      clearPins(); let i = 0; snap.forEach(doc => { i++; pins.push(makePin(doc.id, doc.data(), i)); }); reposition();
+      clearPins(); let i = 0; snap.forEach(doc => { i++; pins.push(makePin(doc.id, doc.data(), i)); }); reposition(); maybeJump();
     }, err => { console.error('[feedback]', err); toast('불러오기 실패 — 규칙 확인'); });
   }
   const clearPins = () => { pins.forEach(p => p.node.remove()); pins = []; };
@@ -182,7 +184,19 @@
       node.appendChild(pop);
       if (mine) { const b = pop.querySelector('.del'); b.onclick = (ev) => { ev.stopPropagation(); if (b.dataset.c) db.collection('feedback').doc(id).delete().catch(() => toast('삭제 실패')); else { b.dataset.c = '1'; b.textContent = '정말 삭제?'; } }; }
     };
-    document.body.appendChild(node); return { node, sel: d.sel, xr: d.xr, yr: d.yr };
+    document.body.appendChild(node); return { node, sel: d.sel, xr: d.xr, yr: d.yr, id };
+  }
+
+  function maybeJump() {
+    if (jumped) return;
+    const id = new URLSearchParams(location.search).get('fb'); if (!id) return;
+    const p = pins.find(x => x.id === id); if (!p) return;
+    jumped = true;
+    const el = getEl(p.sel); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => {
+      reposition();
+      const btn = p.node.querySelector('button'); if (btn) { btn.click(); btn.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.6)' }, { transform: 'scale(1)' }], { duration: 500, iterations: 2 }); }
+    }, 500);
   }
 
   function reposition() {

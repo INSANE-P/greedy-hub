@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ko" class="scroll-smooth">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>피드백 보드 — 그리디 허브</title>
+  <link rel="icon" href="assets/logo.png" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config={darkMode:'class',theme:{extend:{colors:{brand:{DEFAULT:'#017356',soft:'#02916C'}}}}}</script>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100 antialiased" style="font-family:Pretendard,system-ui,'Malgun Gothic',sans-serif">
+
+  <header class="sticky top-0 z-20 backdrop-blur bg-slate-50/85 dark:bg-slate-900/85 border-b border-slate-900/5 dark:border-white/10">
+    <div class="mx-auto max-w-4xl px-5 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-2 font-bold text-lg"><img src="assets/logo.png" class="w-8 h-8 rounded-full"/> 피드백 보드</div>
+      <div class="flex items-center gap-2 text-sm">
+        <button onclick="document.documentElement.classList.toggle('dark')" class="p-2 rounded-lg hover:bg-slate-200/60 dark:hover:bg-white/10" title="다크모드">🌙</button>
+        <a href="index.html?mvp=1" class="px-3 py-2 rounded-lg ring-1 ring-slate-900/10 dark:ring-white/15 font-semibold">← 사이트로</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-4xl px-5 py-8">
+    <div class="flex items-end justify-between gap-3">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-bold">피드백 한눈에</h1>
+        <p id="summary" class="mt-1 text-slate-600 dark:text-slate-400">불러오는 중…</p>
+      </div>
+    </div>
+    <div id="board" class="mt-6 space-y-6"></div>
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script>
+    const cfg = { apiKey:"AIzaSyA1EsiKfHPXQtijoNu13iAN9MsXQleNTBE", authDomain:"greedy-hub-feedback.firebaseapp.com", projectId:"greedy-hub-feedback", storageBucket:"greedy-hub-feedback.firebasestorage.app", messagingSenderId:"92049334341", appId:"1:92049334341:web:62f10683607adb7911832c" };
+    firebase.initializeApp(cfg);
+    const db = firebase.firestore();
+
+    const LABELS = { 'index.html':'홈 (소개)','member.html':'멤버 디렉토리','member-profile.html':'멤버 이력서','study.html':'스터디','projects.html':'프로젝트','project-detail.html':'프로젝트 상세','gallery.html':'활동 타임라인','activity-detail.html':'활동 상세','blog.html':'기술블로그','blog-detail.html':'블로그 글','blog-write.html':'블로그 작성','recruit.html':'지원','missions.html':'미션','mission-detail.html':'미션 상세','review.html':'리뷰어','admin.html':'운영진','admin-members.html':'멤버·권한','admin-recruit.html':'지원자 관리' };
+    const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const label = p => LABELS[p] || p;
+    const posHint = yr => yr < 0.33 ? '상단' : (yr < 0.66 ? '중단' : '하단');
+
+    db.collection('feedback').onSnapshot(snap => {
+      const items = []; snap.forEach(d => items.push({ id:d.id, ...d.data() }));
+      items.sort((a,b)=>((b.ts&&b.ts.seconds)||0)-((a.ts&&a.ts.seconds)||0));
+      const byPage = {}; items.forEach(it => (byPage[it.page]=byPage[it.page]||[]).push(it));
+      const pages = Object.keys(byPage);
+      document.getElementById('summary').textContent = items.length ? `총 ${items.length}개 · ${pages.length}개 화면` : '아직 남긴 피드백이 없어요.';
+      document.getElementById('board').innerHTML = pages.map(pg => `
+        <section class="rounded-2xl bg-white dark:bg-slate-800/70 shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10 overflow-hidden">
+          <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 dark:border-white/10">
+            <div class="font-bold">${esc(label(pg))} <span class="text-sm font-normal text-slate-400">${byPage[pg].length}</span></div>
+            <a href="${esc(pg)}?mvp=1" class="text-sm font-semibold text-brand hover:underline">화면 열기 →</a>
+          </div>
+          <ul class="divide-y divide-slate-100 dark:divide-white/10">
+            ${byPage[pg].map(it => `
+              <li class="p-4 flex gap-3 hover:bg-slate-50 dark:hover:bg-white/5">
+                <span class="shrink-0 mt-0.5 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-brand/10 text-brand h-max">${posHint(it.yr)}</span>
+                <div class="min-w-0 flex-1">
+                  <div class="text-sm whitespace-pre-wrap break-words">${esc(it.text)}</div>
+                  <div class="mt-1 text-xs text-slate-500">${esc(it.author||'익명')} · ${it.ts&&it.ts.toDate?it.ts.toDate().toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'방금'}</div>
+                </div>
+                <a href="${esc(pg)}?mvp=1&fb=${esc(it.id)}" class="shrink-0 self-center text-sm font-semibold text-brand hover:underline" title="이 위치로 이동">→ 이동</a>
+              </li>`).join('')}
+          </ul>
+        </section>`).join('') || `<div class="text-center text-slate-400 py-16">피드백이 쌓이면 여기 모여요.</div>`;
+    }, err => { console.error(err); document.getElementById('summary').textContent = '불러오기 실패 — Firestore 규칙을 확인하세요.'; });
+  </script>
+</body>
+</html>
